@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zabbix_export>
+    <version>5.0</version>
+    <date>2021-09-10T00:38:10Z</date>
+    <groups>
+        <group>
+            <name>Discovered hosts</name>
+        </group>
+    </groups>
+    <templates>
+        <template>
+            <template>Template Palo Alto BGP</template>
+            <name>Template Palo Alto BGP</name>
+            <description>Develop by jdinocco (https://github.com/jdinocco)</description>
+            <groups>
+                <group>
+                    <name>Discovered hosts</name>
+                </group>
+            </groups>
+            <applications>
+                <application>
+                    <name>BGP Peer Status</name>
+                </application>
+                <application>
+                    <name>BGP Raw Data</name>
+                </application>
+            </applications>
+            <discovery_rules>
+                <discovery_rule>
+                    <name>BGP Peer Discovery</name>
+                    <type>HTTP_AGENT</type>
+                    <key>bgp-peer-discovery</key>
+                    <delay>1h</delay>
+                    <item_prototypes>
+                        <item_prototype>
+                            <name>BGP PEER {#SERVICE} PREFIX IN</name>
+                            <type>DEPENDENT</type>
+                            <key>bgp-peer-prefix-in[{#SERVICE}]</key>
+                            <delay>0</delay>
+                            <trends>0</trends>
+                            <applications>
+                                <application>
+                                    <name>BGP Peer Status</name>
+                                </application>
+                            </applications>
+                            <valuemap>
+                                <name>Service state</name>
+                            </valuemap>
+                            <preprocessing>
+                                <step>
+                                    <type>XMLPATH</type>
+                                    <params>string(//entry//incoming-total)</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>bgpRaw[{#SERVICE}]</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>BGP PEER {#SERVICE} PREFIX OUT</name>
+                            <type>DEPENDENT</type>
+                            <key>bgp-peer-prefix-out[{#SERVICE}]</key>
+                            <delay>0</delay>
+                            <trends>0</trends>
+                            <applications>
+                                <application>
+                                    <name>BGP Peer Status</name>
+                                </application>
+                            </applications>
+                            <valuemap>
+                                <name>Service state</name>
+                            </valuemap>
+                            <preprocessing>
+                                <step>
+                                    <type>XMLPATH</type>
+                                    <params>string(//entry//outgoing-total)</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>bgpRaw[{#SERVICE}]</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>BGP PEER {#SERVICE} STATUS</name>
+                            <type>DEPENDENT</type>
+                            <key>bgp-peer-status[{#SERVICE}]</key>
+                            <delay>0</delay>
+                            <trends>0</trends>
+                            <applications>
+                                <application>
+                                    <name>BGP Peer Status</name>
+                                </application>
+                            </applications>
+                            <valuemap>
+                                <name>Service state</name>
+                            </valuemap>
+                            <preprocessing>
+                                <step>
+                                    <type>XMLPATH</type>
+                                    <params>string(//entry//status)</params>
+                                </step>
+                                <step>
+                                    <type>REGEX</type>
+                                    <params>(.*)
+\1</params>
+                                </step>
+                                <step>
+                                    <type>REGEX</type>
+                                    <params>(.*)
+\1:Established=1:Idle=0:Connect=0:Active=0:Open-Sent=0:Open-confirm=0</params>
+                                </step>
+                                <step>
+                                    <type>REGEX</type>
+                                    <params>(Established|Idle|Connect|Active|Open-Sent|Open-connect)(?=.*:\1=(\d))
+\2</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>bgpRaw[{#SERVICE}]</key>
+                            </master_item>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{last(#2)}=0</expression>
+                                    <name>Peer Down: {HOST.HOST} - {#SERVICE}</name>
+                                    <priority>HIGH</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>BGP PEER {#SERVICE} RAW</name>
+                            <type>HTTP_AGENT</type>
+                            <key>bgpRaw[{#SERVICE}]</key>
+                            <delay>5m</delay>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>BGP Raw Data</name>
+                                </application>
+                            </applications>
+                            <url>https://{HOST.CONN}/api/</url>
+                            <query_fields>
+                                <query_field>
+                                    <name>type</name>
+                                    <value>op</value>
+                                </query_field>
+                                <query_field>
+                                    <name>cmd</name>
+                                    <value>&lt;show&gt;&lt;routing&gt;&lt;protocol&gt;&lt;bgp&gt;&lt;peer&gt;&lt;peer-name&gt;{#SERVICE}&lt;/peer-name&gt;&lt;/peer&gt;&lt;/bgp&gt;&lt;/protocol&gt;&lt;/routing&gt;&lt;/show&gt;</value>
+                                </query_field>
+                                <query_field>
+                                    <name>key</name>
+                                    <value>{$APIKEY}</value>
+                                </query_field>
+                            </query_fields>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{diff()}=0</expression>
+                                    <name>HTTP PEER INFO IS NOT WORKING</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                    </item_prototypes>
+                    <url>https://{HOST.CONN}/api/</url>
+                    <query_fields>
+                        <query_field>
+                            <name>type</name>
+                            <value>op</value>
+                        </query_field>
+                        <query_field>
+                            <name>cmd</name>
+                            <value>&lt;show&gt;&lt;routing&gt;&lt;protocol&gt;&lt;bgp&gt;&lt;peer&gt;&lt;/peer&gt;&lt;/bgp&gt;&lt;/protocol&gt;&lt;/routing&gt;&lt;/show&gt;</value>
+                        </query_field>
+                        <query_field>
+                            <name>key</name>
+                            <value>{$APIKEY}</value>
+                        </query_field>
+                    </query_fields>
+                    <preprocessing>
+                        <step>
+                            <type>XMLPATH</type>
+                            <params>//entry/@peer</params>
+                        </step>
+                        <step>
+                            <type>JAVASCRIPT</type>
+                            <params>value = value.trim();
+var parsed = value.split(' ').reduce(function(acc, x, i) {
+  parts = x.trim().split('&quot;')
+  acc[&quot;data&quot;].push({&quot;{#SERVICE}&quot;:parts[1]})
+  return acc;
+}, {&quot;data&quot;: []});
+
+return JSON.stringify(parsed);</params>
+                        </step>
+                    </preprocessing>
+                </discovery_rule>
+            </discovery_rules>
+            <macros>
+                <macro>
+                    <macro>{$APIKEY}</macro>
+                </macro>
+            </macros>
+        </template>
+    </templates>
+    <value_maps>
+        <value_map>
+            <name>Service state</name>
+            <mappings>
+                <mapping>
+                    <value>0</value>
+                    <newvalue>Down</newvalue>
+                </mapping>
+                <mapping>
+                    <value>1</value>
+                    <newvalue>Up</newvalue>
+                </mapping>
+            </mappings>
+        </value_map>
+    </value_maps>
+</zabbix_export>
